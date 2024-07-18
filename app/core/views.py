@@ -59,8 +59,6 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             
             else:
                 return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
-            
-        
         except:
             return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
@@ -75,11 +73,8 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             
             if user:
                 ...
-            
             else:
                 return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
-            
-        
         except:
             return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         

@@ -1,8 +1,14 @@
 """Create and manage app models and methods."""
 
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
                                         PermissionsMixin
+                                        
+
+from rest_framework_simplejwt.tokens import RefreshToken
+
 # Create your models here.
 
 
@@ -32,6 +38,7 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model that supports using email instead of username."""
 
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=True)
     email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
@@ -40,3 +47,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
+    
+    def get_tokens(self):
+        refresh = RefreshToken.for_user(self)
+
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }

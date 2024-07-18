@@ -19,8 +19,14 @@ class CreateUserSerializer(serializers.ModelSerializer):
     email = serializers.CharField(required=True)
     password = serializers.CharField(required=True)
     name = serializers.CharField(required=True)
+    tokens = serializers.SerializerMethodField()
+    
+    def get_tokens(self, user):
+        return user.get_tokens()
     
     def create(self, validated_data):
+        # Keep all email addresses unique by converting them to lower case
+        validated_data['email'] = validated_data['email'].lower() 
         user = User.objects.create_user(**validated_data)
         return user
         
@@ -31,7 +37,9 @@ class CreateUserSerializer(serializers.ModelSerializer):
             'email',
             'password',
             'name',
+            'tokens',
         )
+        read_only_fields = ('tokens',)
         extra_kwargs = {'password': {'write_only': True}}
 
 
