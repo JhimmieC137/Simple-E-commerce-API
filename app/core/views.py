@@ -16,6 +16,112 @@ from core.serializers import *
 
 
 
+class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    queryset = User.objects.all()
+    serializers = {
+        'default': UserSerializer,
+        'register': CreateUserSerializer,
+        'reset_password': ResetPasswordSerializer,
+        'request_password_reset': RequestPasswordResetSerializer,
+    }
+
+    
+    def get_queryset(self):                                      
+        return super().get_queryset()
+    
+    def get_serializer_class(self):
+        return self.serializers.get(self.action, self.serializers['default'])
+    
+    def create(self, request):
+        """
+        User registeration
+        """
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return Response({"message": "User created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        
+        except Exception as e:
+            return Response({'message': f'{e}'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+    @action(detail=False, methods = ['post'], url_path='request-password-reset', url_name='request-password-reset')
+    def request_password_reset(self, request):
+        """
+        Send password reset link to user's mail 
+        """
+        try:
+            user = self.queryset.filter(email = request.data['email']).exists()
+            
+            if user:
+                ...
+            
+            else:
+                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
+            
+        
+        except:
+            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    
+    @action(detail=False, methods = ['post'], url_path='reset-password', url_name='reset-password')
+    def reset_password(self, request):
+        """
+        User registeration
+        """
+        try:
+            user = self.queryset.filter(email = request.data['email']).exists()
+            
+            if user:
+                ...
+            
+            else:
+                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
+            
+        
+        except:
+            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        
+    @action(detail=False, methods = ['post'], url_path='login', url_name='login')
+    def login_view(self, request):
+        """
+        User login 
+        """
+        
+        try:
+            user = self.queryset.filter(email = request.data['email']).exists()
+            
+            if user:
+                user = authenticate(request, email=request.data['email'], password=request.data['password'])
+                print(user)
+                login(request, user)
+                print(user)
+                return Response('Logged in successfully', status=status.HTTP_200_OK)
+            
+            else:
+                return Response(f"Invalid Credentials", status=status.HTTP_404_NOT_FOUND)
+            
+        
+        except:
+            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        
+    
+    @action(detail=False, methods = ['get'], url_path='logout', url_name='logout')
+    def logout_view(self, request):
+        """
+        User Logout
+        """
+        try:
+            logout(request)
+            return Response('Logged in successfully', status=status.HTTP_200_OK)
+        except:
+            return Response('Something went wrong', status=status.HTTP_200_OK)
+
+
+
 class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.GenericViewSet):
     """
     Creates, Updates and Retrieves - User Accounts
@@ -23,8 +129,8 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     parser_classes = (MultiPartParser, FormParser)
     queryset = User.objects.all()
     serializers = {
-                'default': UserSerializer,
-            }
+        'default': UserSerializer,
+    }
     
     def get_queryset(self):                                      
         return super().get_queryset()
