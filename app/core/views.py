@@ -180,9 +180,6 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     def get_serializer_class(self):
         return self.serializers.get(self.action, self.serializers['default'])
     
-    
-    
-    
     def list(self, request):
         queryset = self.get_queryset()
         queryset = self.queryset.filter(
@@ -205,11 +202,20 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     def retrieve(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
-            serializer = self.get_serializer(instance)
-            return Response({"message":"User retrived successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-        
         except:
-            return Response({"message": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+        try:
+            if instance.is_active:
+                serializer = self.get_serializer(instance)
+                return Response({"message":"User retrived successfully", "data": serializer.data}, status=status.HTTP_200_OK)
+            
+            else:
+                return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
+        except:
+            return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            
         
         
     def perform_update(self, serializer):
@@ -218,17 +224,22 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
-        
         try:
             instance = self.get_object()
         except:
-            return Response({"message": "Not found"}, status=status.HTTP_404_NOT_FOUND)
-        
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+            
         try:
-            serializer = self.get_serializer(instance, data=request.data, partial=partial)
-            serializer.is_valid(raise_exception=True)
+            if instance.is_active:
+                serializer = self.get_serializer(instance, data=request.data, partial=partial)
+                serializer.is_valid(raise_exception=True)
+
+            else:
+                return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
+                    
         except:
-            return Response({"message": "Invalid data"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
         
         
         self.perform_update(serializer)
