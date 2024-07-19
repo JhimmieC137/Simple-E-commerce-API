@@ -1,7 +1,11 @@
+import jwt
+from datetime import datetime, timedelta
+
 # Django Iports
 from django.contrib.auth import login, logout, authenticate
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+
 
 # DRF Imports
 from rest_framework import viewsets, mixins
@@ -9,18 +13,22 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework_simplejwt.tokens import RefreshToken
 
 # Core Iports
+from app.settings import SECRET_KEY
 from core.models import User
 from core.serializers import *
 
 
 
 class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    # parser_classes = (MultiPartParser, FormParser)
     queryset = User.objects.all()
     serializers = {
         'default': UserSerializer,
-        'register': CreateUserSerializer,
+        'create': CreateUserSerializer,
+        'login_view': LoginUserSerializer,
         'reset_password': ResetPasswordSerializer,
         'request_password_reset': RequestPasswordResetSerializer,
     }
@@ -32,51 +40,33 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def get_serializer_class(self):
         return self.serializers.get(self.action, self.serializers['default'])
     
+    @action(detail=False, methods=['get'], url_path='me', url_name='me')
+    def session(self, instance):
+        """
+        User in session
+        """
+        try:
+            return Response(UserSerializer(self.request.user, context={'request': self.request}).data, status=status.HTTP_200_OK)
+        except:
+            return Response({'message': 'Wrong auth token'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        
     def create(self, request):
         """
         User registeration
         """
-        serializer = self.get_serializer(data=request.data)
         try:
+            user = self.queryset.filter(email = request.data['email']).exists()
+            if user:
+                return Response({'message': 'Email already exists'}, status=status.HTTP_409_CONFLICT)
+                
+            serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
             return Response({"message": "User created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
         
         except Exception as e:
-            return Response({'message': f'{e}'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    
-    @action(detail=False, methods = ['post'], url_path='request-password-reset', url_name='request-password-reset')
-    def request_password_reset(self, request):
-        """
-        Send password reset link to user's mail 
-        """
-        try:
-            user = self.queryset.filter(email = request.data['email']).exists()
-            
-            if user:
-                ...
-            
-            else:
-                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
-        except:
-            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-    
-    @action(detail=False, methods = ['post'], url_path='reset-password', url_name='reset-password')
-    def reset_password(self, request):
-        """
-        User registeration
-        """
-        try:
-            user = self.queryset.filter(email = request.data['email']).exists()
-            
-            if user:
-                ...
-            else:
-                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
-        except:
-            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'message': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
         
         
     @action(detail=False, methods = ['post'], url_path='login', url_name='login')
@@ -84,36 +74,93 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         """
         User login 
         """
+        try:
+            user = self.queryset.get(email = request.data['email'])
+            if user:
+                if  user.is_active:
+                    user = authenticate(email=request.data['email'], password=request.data['password'])
+                    if user:    
+                        serializer = self.get_serializer(user, data=request.data)
+                        serializer.is_valid(raise_exception=True)
+                        return Response({'mesesage':'Logged in successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({'message': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
+            else:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            
+        except Exception as e:
+            return Response({'message': f'Something went wrong {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    
+    @action(detail=False, methods = ['post'], url_path='request-password-reset', url_name='request-password-reset')
+    def request_password_reset(self, request):
+        """
+        Send password reset link via email 
+        """
+        try:
+            user = self.queryset.get(email = request.data['email'])
+            if user:
+                if  user.is_active:
+                    # Append token to FE url as a query parameter
+                    reset_token = jwt.encode({'id': user.id, 'exp': datetime.now() + timedelta(minutes=10)}, SECRET_KEY, algorithm="HS256")
+                    
+                    # Token is being returned for the purpose of testing the endpoint 
+                    return Response({'message': 'Reset mail sent', 'data': reset_token}, status=status.HTTP_200_OK)
+                else:
+                    return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
+                
+            else:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except:
+            return Response({'message': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    
+    @action(detail=False, methods = ['post'], url_path='reset-password', url_name='reset-password')
+    def reset_password(self, request):
+        """
+        Password reset
+        """        
+        try:
+            payload: dict = jwt.decode(str(request.headers['authorization']).split(' ')[1], SECRET_KEY, algorithms=["HS256"])
+        except:
+            return Response({'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            user = self.queryset.filter(email = request.data['email']).exists()
-            
+            user = self.queryset.get(id = payload['id'])    
             if user:
-                user = authenticate(request, email=request.data['email'], password=request.data['password'])
-                print(user)
-                login(request, user)
-                print(user)
-                return Response('Logged in successfully', status=status.HTTP_200_OK)
-            
+                if  user.is_active:
+                    user.set_password(request.data['password'])
+                    user.save()
+                    serializer = self.get_serializer(user, data=request.data)
+                    serializer.is_valid(raise_exception=True)
+                    return Response({'message': 'Password reset successful', 'data': serializer.data}, status=status.HTTP_200_OK)
+                
+                else:
+                    return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
+                
             else:
-                return Response(f"Invalid Credentials", status=status.HTTP_404_NOT_FOUND)
-            
-        
+                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
         except:
-            return Response(f"Something went wrong", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
+            return Response({'message': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     
     @action(detail=False, methods = ['get'], url_path='logout', url_name='logout')
     def logout_view(self, request):
         """
-        User Logout
+        Remove user from session
         """
         try:
+            if str(request.headers['authorization']) is None or str(request.headers['authorization']) == "":
+                return Response({'messgae': 'No token detected'}, status=status.HTTP_200_OK)
+                
+            token = RefreshToken(str(request.headers['authorization']).split(' ')[1])
+            token.blacklist()
             logout(request)
-            return Response('Logged in successfully', status=status.HTTP_200_OK)
+            return Response({'messgae': 'Logged out successfully'}, status=status.HTTP_200_OK)
         except:
-            return Response('Something went wrong', status=status.HTTP_200_OK)
+            return Response({'messgae': 'Something went wrong'}, status=status.HTTP_200_OK)
 
 
 
@@ -134,22 +181,14 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
         return self.serializers.get(self.action, self.serializers['default'])
     
     
-    @action(detail=False, methods=['get'], url_path='me', url_name='me')
-    def session(self, instance):
-        """
-        User in session
-        """
-        try:
-            return Response(UserSerializer(self.request.user, context={'request': self.request}).data, status=status.HTTP_200_OK)
-        except:
-            return Response({'message': 'Wrong auth token'}, status=status.HTTP_400_BAD_REQUEST)
     
     
     def list(self, request):
         queryset = self.get_queryset()
         queryset = self.queryset.filter(
             Q(name__icontains = request.query_params.get('search') if request.query_params.get('search') else '') |
-            Q(email__icontains = request.query_params.get('search') if request.query_params.get('search') else '')
+            Q(email__icontains = request.query_params.get('search') if request.query_params.get('search') else ''),
+            is_active = True
         ).values()
         try:
             page = self.paginate_queryset(queryset)
@@ -163,7 +202,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         
-    def retrieve(self, request):
+    def retrieve(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)

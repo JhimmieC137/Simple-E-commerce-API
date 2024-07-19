@@ -1,3 +1,5 @@
+from django.contrib.auth import login, logout, authenticate
+
 from rest_framework import serializers
 
 from core.models import User
@@ -12,13 +14,10 @@ class UserSerializer(serializers.ModelSerializer):
             'is_staff',
             'is_active',
         )
-        read_only_fields = ('email','is_active', 'is_staff',)
+        read_only_fields = ('email', 'is_active', 'is_staff',)
 
 
-class CreateUserSerializer(serializers.ModelSerializer):      
-    email = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
-    name = serializers.CharField(required=True)
+class CreateUserSerializer(serializers.ModelSerializer):
     tokens = serializers.SerializerMethodField()
     
     def get_tokens(self, user):
@@ -34,24 +33,36 @@ class CreateUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
+            'id',
             'email',
-            'password',
             'name',
+            'password',
             'tokens',
+            'is_staff',
+            'is_active',
         )
-        read_only_fields = ('tokens',)
+        read_only_fields = ('id', 'tokens', 'is_staff', 'is_active')
         extra_kwargs = {'password': {'write_only': True}}
 
 
 class LoginUserSerializer(serializers.ModelSerializer):
-    email = serializers.CharField(required=True)
-    password = serializers.CharField(required=True)
+    tokens = serializers.SerializerMethodField()
+    
+    def get_tokens(self, user):
+        return user.get_tokens()        
+        ...
     class Meta:
         model = User
         fields = (
+            'id',
             'email',
+            'name',
             'password',
+            'tokens',
+            'is_staff',
+            'is_active',
         )
+        read_only_fields = ('id', 'tokens', 'name', 'is_staff', 'is_active')
         extra_kwargs = {'password': {'write_only': True}}
 
 class UpdateUserSerializer(serializers.ModelSerializer):   
@@ -69,9 +80,19 @@ class RequestPasswordResetSerializer(serializers.ModelSerializer):
             'email',
         )
 
-class ResetPasswordSerializer(serializers.ModelSerializer):   
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    tokens = serializers.SerializerMethodField()
+    
+    def get_tokens(self, user):
+        return user.get_tokens()    
     class Meta:
         model = User
         fields = (
-            'password',
+            'id',
+            'email',
+            'name',
+            'tokens',
+            'is_staff',
+            'is_active',
         )
+        read_only_fields = ('id', 'email', 'tokens', 'name', 'is_staff', 'is_active')
