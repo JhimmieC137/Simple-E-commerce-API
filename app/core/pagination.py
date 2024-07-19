@@ -9,7 +9,8 @@ class CustomPagination(LimitOffsetPagination):
                 'data': {
                     'next': self.get_next_link(),
                     'previous': self.get_previous_link(),
-                    'count': self.count,
+                    'count': len(data),
+                    'total_count': self.count,
                     'results': data
                 },
                 'message' : 'Items retrived successfully'

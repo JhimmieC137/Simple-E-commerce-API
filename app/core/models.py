@@ -70,17 +70,18 @@ class Product(models.Model):
     
     name = models.CharField(max_length=50, null=False, unique=True)
     description = models.TextField(max_length=700, null=True)
-    price = models.BigIntegerField(null=False)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
-    
+    price = models.FloatField(null=False, )
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
+        
     def __str__(self):
         return self.name
-    
 
 class Order(models.Model):
     """Custom Order model with relations to User and Product"""
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    product = models.ManyToManyField(Product)
-    date_created = models.CharField(max_length=20, default=datetime.now(), null=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    products = models.ManyToManyField(Product)
+    date_created = models.CharField(max_length=50, default=datetime.now(), null=False)
+    class Meta: 
+        ordering = ["-date_created"]
     

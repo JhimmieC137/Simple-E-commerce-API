@@ -1,20 +1,7 @@
-from django.contrib.auth import login, logout, authenticate
-
 from rest_framework import serializers
 
 from core.models import *
 
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'id',
-            'email',
-            'name',
-            'is_staff',
-            'is_active',
-        )
-        read_only_fields = ('email', 'is_active', 'is_staff',)
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -96,9 +83,21 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
             'is_active',
         )
         read_only_fields = ('id', 'email', 'tokens', 'name', 'is_staff', 'is_active')
+
         
-        
+class ProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Product
+        fields = '__all__'
+        extra_kwargs = {'category': {'write_only': True}}
+    
+    def create(self, validated_data):
+        product = Product.objects.create(**validated_data)
+        return product
+    
+
 class CategorySerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True, read_only=True)
     class Meta:
         model=Category
         fields = '__all__'
@@ -106,3 +105,42 @@ class CategorySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         category = Category.objects.create(**validated_data)
         return category
+        
+        
+class OrderSerializer(serializers.ModelSerializer):
+    products = ProductSerializer(many=True)
+    class Meta:
+        model=Order
+        fields = '__all__'
+class CreateOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Order
+        fields = '__all__'
+        read_only_fields = ('date_created',)
+    
+    def create(self, validated_data):
+        products = validated_data.pop('products')
+        order = Order.objects.create(**validated_data)
+        for product_id in products:
+            order.products.add(product_id)
+        
+        return order
+    
+class UpdateOrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Order
+        fields = '__all__'
+        
+class UserSerializer(serializers.ModelSerializer):
+    orders = OrderSerializer(many=True, read_only=True)
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'email',
+            'name',
+            'orders',
+            'is_staff',
+            'is_active',
+        )
+        read_only_fields = ('email', 'is_active', 'is_staff',)
