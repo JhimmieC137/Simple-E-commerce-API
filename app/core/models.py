@@ -1,5 +1,7 @@
 """Create and manage app models and methods."""
 
+from datetime import datetime
+
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, \
                                         PermissionsMixin
@@ -51,3 +53,34 @@ class User(AbstractBaseUser, PermissionsMixin):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
+
+class Category(models.Model):
+    """ustom Category model with relations to Product"""
+    
+    name = models.CharField(max_length=50, null=False, unique=True)
+    description = models.TextField(max_length=700, null=True)
+    
+    
+    def __str__(self):
+        return self.name
+    
+
+class Product(models.Model):
+    """Custom Product model with relations to Category and Order"""
+    
+    name = models.CharField(max_length=50, null=False, unique=True)
+    description = models.TextField(max_length=700, null=True)
+    price = models.BigIntegerField(null=False)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    
+    def __str__(self):
+        return self.name
+    
+
+class Order(models.Model):
+    """Custom Order model with relations to User and Product"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ManyToManyField(Product)
+    date_created = models.CharField(max_length=20, default=datetime.now(), null=False)
+    

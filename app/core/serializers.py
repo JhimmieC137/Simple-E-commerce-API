@@ -2,7 +2,7 @@ from django.contrib.auth import login, logout, authenticate
 
 from rest_framework import serializers
 
-from core.models import User
+from core.models import *
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -96,3 +96,13 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
             'is_active',
         )
         read_only_fields = ('id', 'email', 'tokens', 'name', 'is_staff', 'is_active')
+        
+        
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model=Category
+        fields = '__all__'
+    
+    def create(self, validated_data):
+        category = Category.objects.create(**validated_data)
+        return category
