@@ -116,7 +116,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields = '__all__'
-        read_only_fields = ('date_created',)
+        read_only_fields = ('date_created', 'status')
     
     def create(self, validated_data):
         products = validated_data.pop('products')
@@ -130,6 +130,11 @@ class UpdateOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields = '__all__'
+    
+    def update(self, validated_data, *args, **kwargs):
+        validated_data.date_updated = datetime.now()
+        validated_data.save()
+        return validated_data
         
 class UserSerializer(serializers.ModelSerializer):
     orders = OrderSerializer(many=True, read_only=True)

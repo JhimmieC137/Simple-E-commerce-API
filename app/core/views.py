@@ -10,6 +10,7 @@ from django.db.models import Q
 # DRF Imports
 from rest_framework import viewsets, mixins
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
@@ -244,11 +245,8 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
                     
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            
         
-        
-    
-
+      
 
 ##########################
 #  CATEGORY
@@ -481,6 +479,9 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
         'update': UpdateOrderSerializer,
         'partial_update': UpdateOrderSerializer,
     }
+    permission_classes = [
+        IsAuthenticated
+    ]
     
     def get_queryset(self):                                      
         return super().get_queryset()
@@ -493,6 +494,7 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
         Create order
         """
         queryset = self.get_queryset()
+        queryset = self.queryset.filter(user_id = request.user.id)
         try:
             page = self.paginate_queryset(queryset)
             if page is not None:
@@ -509,9 +511,11 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
         Create order
         """        
         try:
-            user = User.objects.filter(id = request.data['user']).exists()
-            if not user:
+            user = User.objects.filter(id = request.data['user'])[0]
+            if user is None:
                 return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+            if not user.is_active:
+                return Response({'message': 'User has been deactivated'}, status=status.HTTP_403_FORBIDDEN)
             
             for product_id in request.data['products']:
                 if not Product.objects.filter(id = product_id).exists():
@@ -561,6 +565,13 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
                     if not Product.objects.filter(id = product_id).exists():
                         return Response({'message': f'Product {product_id} not found'}, status=status.HTTP_404_NOT_FOUND)
             
+            user =  User.objects.filter(id = request.data['user'])[0]
+            if user:
+                if user is None:
+                    return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+                if not user.is_active:
+                    return Response({'message': 'User has been deactivated'}, status=status.HTTP_403_FORBIDDEN)
+                
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
             serializer.save()
