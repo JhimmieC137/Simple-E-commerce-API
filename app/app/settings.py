@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'core',
     'drf_yasg',
-    # 'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -128,7 +127,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Django Rest Framework
 REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.CustomPagination',
-    # 'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'PAGE_SIZE': int(os.getenv('DJANGO_PAGINATION_LIMIT', 10)),
     'DATETIME_FORMAT': '%Y-%m-%dT%H:%M:%S.%fZ',
     'DEFAULT_RENDERER_CLASSES': (
@@ -138,8 +136,10 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.IsAuthenticated',
     ],
+    "EXCEPTION_HANDLER": ("core.exceptions.custom_exception_handler"),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_THROTTLE_CLASSES': [
@@ -201,16 +201,15 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
+LOGIN_URL = 'rest_framework:login'
+LOGOUT_URL = 'rest_framework:logout'
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
-        'Basic': {
-            'type': 'basic'
-        },
         'Bearer': {
-            'type': 'apikey',
+            'type': 'apiKey',
             'name': 'Authorization',
-            'in': 'header'
+            'in': 'header',
         }
     }
 }

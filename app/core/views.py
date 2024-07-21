@@ -15,9 +15,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework import filters
 
-# Core Iports
+# Core Imports
 from app.settings import SECRET_KEY
+from core.permissions import IsJWTValidated
 from core.models import *
 from core.serializers import *
 
@@ -36,8 +38,8 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         'reset_password': ResetPasswordSerializer,
         'request_password_reset': RequestPasswordResetSerializer,
     }
-
     
+        
     def get_queryset(self):                                      
         return super().get_queryset()
     
@@ -155,14 +157,11 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         """
         Remove user from session
         """
-        try:
-            if str(request.headers['authorization']) is None or str(request.headers['authorization']) == "":
-                return Response({'messgae': 'No token detected'}, status=status.HTTP_200_OK)
-                
-            token = RefreshToken(str(request.headers['authorization']).split(' ')[1])
-            token.blacklist()
-            logout(request)
-            return Response({'messgae': 'Logged out successfully'}, status=status.HTTP_200_OK)
+        try:               
+            RefreshToken(str(request.headers['Authorization']).split(' ')[1]).blacklist()           
+            logout(request)             
+            request.user = None              
+            return Response({}, status=status.HTTP_204_OK)
         except:
             return Response({'messgae': 'Something went wrong'}, status=status.HTTP_200_OK)
 
@@ -176,10 +175,16 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
     Creates, Updates and Retrieves - User Accounts
     """
     # parser_classes = (MultiPartParser, FormParser)
-    queryset = User.objects.all()
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'email']
+    queryset = User.objects.all().order_by('email')
     serializers = {
         'default': UserSerializer,
     }
+    
+    permission_classes = [
+        IsJWTValidated
+    ]
     
     def get_queryset(self):                                      
         return super().get_queryset()
@@ -257,6 +262,10 @@ class CategoryViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins
         'default': CategorySerializer,
     }
     
+    permission_classes = [
+        IsJWTValidated
+    ]
+    
     def get_queryset(self):                                      
         return super().get_queryset()
     
@@ -268,9 +277,7 @@ class CategoryViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins
         Create category
         """
         queryset = self.get_queryset()
-        queryset = self.queryset.filter(
-            Q(name__icontains = request.query_params.get('search') if request.query_params.get('search') else '')
-        ).values()
+        
         try:
             page = self.paginate_queryset(queryset)
             if page is not None:
@@ -358,10 +365,16 @@ class CategoryViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins
 #  PRODUCT
 ##########################
 class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.all().order_by('name')
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
     serializers = {
         'default': ProductSerializer,
     }
+    
+    permission_classes = [
+        IsJWTValidated
+    ]
     
     def get_queryset(self):                                      
         return super().get_queryset()
@@ -472,7 +485,7 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
 #  ORDER
 ##########################
 class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    queryset = Order.objects.all()
+    queryset = Order.objects.all().order_by('date_created')
     serializers = {
         'default': OrderSerializer,
         'create': CreateOrderSerializer,
@@ -480,7 +493,7 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
         'partial_update': UpdateOrderSerializer,
     }
     permission_classes = [
-        IsAuthenticated
+        IsJWTValidated
     ]
     
     def get_queryset(self):                                      
