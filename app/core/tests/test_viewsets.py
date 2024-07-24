@@ -32,31 +32,6 @@ class TokenAcessRefreshViewTests(APITestCase):
         self.assertEqual(token_payload['user_id'], signup_response.data['data']['id'])
         self.assertEqual(token_payload['token_type'], 'access')
         
-    def test_token_blacklist_success(self):
-        """
-        Test success blacklisting user's refresh token
-        """
-        url = reverse('user-register')
-        data = {
-            'email': 'Test2@mail.com',
-            'password': 'Pass@2ndversion',
-            'name': 'TestDev'
-        }
-        signup_response = self.client.post(url, data)
-        url = reverse('user-logout')
-        data = {
-            'refresh': signup_response.data['data']['tokens']['refresh']
-        }
-        logout_response = self.client.post(url, data)
-        
-        url = reverse('token_refresh')
-        data = {
-            'refresh': signup_response.data['data']['tokens']['refresh']
-        }
-        refresh_response = self.client.post(url, data)
-        self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
         
 
 
@@ -97,26 +72,32 @@ class SignUpLoginViewTests(APITestCase):
         self.assertEqual(len(response.data['data']['tokens']), 2)
     
     
-    # def test_user_logout_success(self):
-    #     """
-    #     Test success removing a user from session
-    #     """
-    #     url = reverse('user-register')
-    #     data = {
-    #         'email': 'Test2@mail.com',
-    #         'password': 'Pass@2ndversion',
-    #         'name': 'TestDev'
-    #     }
-    #     signup_response = self.client.post(url, data)
-    #     url = reverse('user-logout')
-    #     logout_response = self.client.get(url)
-    #     tokens = signup_response.data['data']['tokens']
-    #     self.client.credentials(HTTP_AUTHORIZATION= "Bearer " + tokens['access'])
-    #     url = reverse('user-me')
-    #     get_user_response = self.client.get(url)
-    #     self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(logout_response.status_code, status.HTTP_200_OK)
+    def test_token_blacklist_success(self):
+        """
+        Test success blacklisting user's refresh token
+        """
+        url = reverse('user-register')
+        data = {
+            'email': 'Test2@mail.com',
+            'password': 'Pass@2ndversion',
+            'name': 'TestDev'
+        }
+        signup_response = self.client.post(url, data)
+        url = reverse('user-logout')
+        data = {
+            'refresh': signup_response.data['data']['tokens']['refresh']
+        }
+        logout_response = self.client.post(url, data)
         
+        url = reverse('token_refresh')
+        data = {
+            'refresh': signup_response.data['data']['tokens']['refresh']
+        }
+        refresh_response = self.client.post(url, data)
+        self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+          
         
     
     
