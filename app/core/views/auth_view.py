@@ -46,7 +46,7 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['get'], url_path='me', url_name='me')
     def session(self, instance):
         """
-        User in session
+        Fetch user in session
         """
         try:
             return Response({'message': 'User details fetched successfully', 'data': UserSerializer(self.request.user, context={'request': self.request}).data}, status=status.HTTP_200_OK)
@@ -101,14 +101,17 @@ class AuthViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods = ['post'], url_path='request-password-reset', url_name='request-password-reset')
     def request_password_reset(self, request):
         """
-        Send password reset link via email 
+        Send password reset link 
         """
         try:
             user = self.queryset.get(email = request.data['email'].lower())
             if user:
                 if  user.is_active:
                     # Append token to FE url as a query parameter
-                    reset_token = jwt.encode({'id': user.id, 'exp': datetime.now() + timedelta(minutes=10)}, SECRET_KEY, algorithm="HS256")
+                    reset_token = jwt.encode(
+                        {'id': user.id, 'exp': datetime.now() + timedelta(minutes=10)},
+                        SECRET_KEY, algorithm="HS256"
+                    )
                     
                     # Token is being returned for the purpose of testing the endpoint 
                     return Response({'message': 'Reset mail sent', 'data': reset_token}, status=status.HTTP_200_OK)
@@ -132,7 +135,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             return Response({'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            user = self.queryset.get(id = payload['id'])    
+            user: User = self.queryset.get(id = payload['id'])    
             if user:
                 if  user.is_active:
                     user.set_password(request.data['password'])

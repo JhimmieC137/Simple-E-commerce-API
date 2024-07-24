@@ -3,7 +3,7 @@ import jwt
 from django.urls import reverse
 
 from rest_framework import status
-from rest_framework.test import APITestCase, APIRequestFactory, APIClient
+from rest_framework.test import APITestCase
 
 from app.settings import SECRET_KEY 
 from core.models import Category, User, Product, Order
