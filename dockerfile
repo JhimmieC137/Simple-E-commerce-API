@@ -14,5 +14,9 @@ RUN mkdir /app
 WORKDIR /app
 COPY ./app /app
 
+# COPY ./entrypoint.sh /
+
+# ENTRYPOINT [ "sh", "/entrypoint.sh" ]
+
 RUN adduser -D user
 USER user
