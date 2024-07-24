@@ -10,7 +10,57 @@ from core.models import Category, User, Product, Order
 from core.serializers import CategorySerializer, UserSerializer, ProductSerializer, OrderSerializer
 
 
-class SignUpAndLoginViewTests(APITestCase):
+class TokenAcessRefreshViewTests(APITestCase):
+    def test_get_user_access_token_success(self):
+        """
+        Test success retrieving new access token for a user
+        """
+        url = reverse('user-register')
+        data = {
+            'email': 'Test2@mail.com',
+            'password': 'Pass@2ndversion',
+            'name': 'TestDev'
+        }
+        signup_response = self.client.post(url, data)
+        url = reverse('token_refresh')
+        data = {
+            'refresh': signup_response.data['data']['tokens']['refresh']
+        }
+        refresh_response = self.client.post(url, data)
+        token_payload = jwt.decode(str(refresh_response.data['access']), SECRET_KEY, algorithms=["HS256"])
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(token_payload['user_id'], signup_response.data['data']['id'])
+        self.assertEqual(token_payload['token_type'], 'access')
+        
+    def test_token_blacklist_success(self):
+        """
+        Test success blacklisting user's refresh token
+        """
+        url = reverse('user-register')
+        data = {
+            'email': 'Test2@mail.com',
+            'password': 'Pass@2ndversion',
+            'name': 'TestDev'
+        }
+        signup_response = self.client.post(url, data)
+        url = reverse('user-logout')
+        data = {
+            'refresh': signup_response.data['data']['tokens']['refresh']
+        }
+        logout_response = self.client.post(url, data)
+        
+        url = reverse('token_refresh')
+        data = {
+            'refresh': signup_response.data['data']['tokens']['refresh']
+        }
+        refresh_response = self.client.post(url, data)
+        self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(logout_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(refresh_response.status_code, status.HTTP_401_UNAUTHORIZED)
+        
+
+
+class SignUpLoginViewTests(APITestCase):
     def test_register_user_success(self):
         """
         Test success creating/registering a user
@@ -47,31 +97,28 @@ class SignUpAndLoginViewTests(APITestCase):
         self.assertEqual(len(response.data['data']['tokens']), 2)
     
     
-    def test_user_logout_success(self):
-        """
-        Test success removing a user from session
-        """
-        url = reverse('user-register')
-        data = {
-            'email': 'Test2@mail.com',
-            'password': 'Pass@2ndversion',
-            'name': 'TestDev'
-        }
-        response = self.client.post(url, data)
-        url = reverse('user-login')
-        data = {
-            'email': data['email'],
-            'password': data['password']
-        }
-        response = self.client.post(url, data)
-        url = reverse('user-logout')
-        logout_response = self.client.get(url)
-        tokens = response.data['data']['tokens']
-        self.client.credentials(HTTP_AUTHORIZATION= "Bearer " + tokens['access'])
-        url = reverse('user-me')
-        get_user_response = self.client.get(url)
-        self.assertEqual(logout_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(get_user_response.status_code, status.HTTP_401_UNAUTHORIZED)
+    # def test_user_logout_success(self):
+    #     """
+    #     Test success removing a user from session
+    #     """
+    #     url = reverse('user-register')
+    #     data = {
+    #         'email': 'Test2@mail.com',
+    #         'password': 'Pass@2ndversion',
+    #         'name': 'TestDev'
+    #     }
+    #     signup_response = self.client.post(url, data)
+    #     url = reverse('user-logout')
+    #     logout_response = self.client.get(url)
+    #     tokens = signup_response.data['data']['tokens']
+    #     self.client.credentials(HTTP_AUTHORIZATION= "Bearer " + tokens['access'])
+    #     url = reverse('user-me')
+    #     get_user_response = self.client.get(url)
+    #     self.assertEqual(signup_response.status_code, status.HTTP_201_CREATED)
+    #     self.assertEqual(logout_response.status_code, status.HTTP_200_OK)
+        
+        
+    
     
 class AuthViewTests(APITestCase):
     def setUp(self):

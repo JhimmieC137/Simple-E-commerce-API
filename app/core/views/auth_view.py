@@ -31,6 +31,7 @@ class AuthViewSet(viewsets.GenericViewSet):
         'default': UserSerializer,
         'register': CreateUserSerializer,
         'login_view': LoginUserSerializer,
+        'logout_view': LogoutUserSerializer,
         'reset_password': ResetPasswordSerializer,
         'request_password_reset': RequestPasswordResetSerializer,
     }
@@ -147,16 +148,20 @@ class AuthViewSet(viewsets.GenericViewSet):
             return Response({'message': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     
-    @action(detail=False, methods = ['get'], url_path='logout', url_name='logout')
+    @action(detail=False, methods = ['post'], url_path='logout', url_name='logout')
     def logout_view(self, request):
         """
         Remove user from session
         """
+        try:
+            RefreshToken(str(request.data['refresh'])).blacklist()           
+        except:
+            return Response({'messgae': 'Token is invalid or already blacklisted'}, status=status.HTTP_400_BAD_REQUEST)
+            
         try:               
-            RefreshToken(str(request.headers['Authorization']).split(' ')[1]).blacklist()           
             logout(request)             
             request.user = None              
-            return Response({}, status=status.HTTP_204_OK)
+            return Response({}, status=status.HTTP_204_NO_CONTENT)
         except:
-            return Response({'messgae': 'Something went wrong'}, status=status.HTTP_200_OK)
+            return Response({'messgae': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

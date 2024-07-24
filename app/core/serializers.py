@@ -31,6 +31,18 @@ class CreateUserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
 
+class LogoutUserSerializer(serializers.ModelSerializer):
+    refresh = serializers.CharField(max_length=None, min_length=None, allow_blank=False)
+    
+    class Meta:
+        model = User
+        fields = (
+            'refresh',
+        )
+        
+        read_only_fields = ('id', 'tokens', 'name', 'is_staff', 'is_active')
+        extra_kwargs = {'refresh': {'write_only': True}}
+
 class LoginUserSerializer(serializers.ModelSerializer):
     tokens = serializers.SerializerMethodField()
     
