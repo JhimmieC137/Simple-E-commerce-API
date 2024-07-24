@@ -1,20 +1,6 @@
 version: "3"
 
 services:
-  db:
-    image: postgres:13.0-alpine
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-    ports:
-      - 5432:5432
-    environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-    env_file:
-      - .env
-    networks:
-      - backend
 
   app:
     build: 
@@ -27,6 +13,21 @@ services:
       sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     depends_on:
       - db
+    networks:
+      - backend
+      
+  db:
+    image: postgres:13.0-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    env_file:
+      - .env
     networks:
       - backend
 
