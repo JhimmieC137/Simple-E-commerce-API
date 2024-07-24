@@ -3,9 +3,6 @@ from datetime import datetime, timedelta
 
 # Django Iports
 from django.contrib.auth import login, logout, authenticate
-from django.core.exceptions import ValidationError
-from django.db.models import Q
-
 
 # DRF Imports
 from rest_framework import viewsets, mixins
@@ -27,12 +24,12 @@ from core.serializers import *
 ##########################
 #  AUTH
 ##########################
-class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+class AuthViewSet(viewsets.GenericViewSet):
     # parser_classes = (MultiPartParser, FormParser)
     queryset = User.objects.all()
     serializers = {
         'default': UserSerializer,
-        'create': CreateUserSerializer,
+        'register': CreateUserSerializer,
         'login_view': LoginUserSerializer,
         'reset_password': ResetPasswordSerializer,
         'request_password_reset': RequestPasswordResetSerializer,
@@ -51,12 +48,12 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         User in session
         """
         try:
-            return Response(UserSerializer(self.request.user, context={'request': self.request}).data, status=status.HTTP_200_OK)
+            return Response({'message': 'User details fetched successfully', 'data': UserSerializer(self.request.user, context={'request': self.request}).data}, status=status.HTTP_200_OK)
         except:
-            return Response({'message': 'Wrong auth token'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': 'Wrong auth token'}, status=status.HTTP_401_UNAUTHORIZED)
         
-        
-    def create(self, request):
+    @action(detail=False, methods=['post'], url_path='register', url_name='register')
+    def register(self, request):
         """
         User registeration
         """
@@ -67,10 +64,10 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
+            serializer.save()
             return Response({"message": "User created successfully", "data": serializer.data}, status=status.HTTP_201_CREATED)
         
-        except Exception as e:
+        except:
             return Response({'message': 'Something went wrong'}, status=status.HTTP_400_BAD_REQUEST)
         
         
@@ -87,6 +84,7 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     if user:    
                         serializer = self.get_serializer(user, data=request.data)
                         serializer.is_valid(raise_exception=True)
+                        login(self.request, user)
                         return Response({'mesesage':'Logged in successfully', 'data': serializer.data}, status=status.HTTP_200_OK)
                     else:
                         return Response({'message': 'Invalid credentials'}, status=status.HTTP_400_BAD_REQUEST)
@@ -94,7 +92,7 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                     return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
             else:
                 return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-            
+
         except Exception as e:
             return Response({'message': f'Something went wrong {e}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
@@ -128,7 +126,7 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         Password reset
         """        
         try:
-            payload: dict = jwt.decode(str(request.headers['authorization']).split(' ')[1], SECRET_KEY, algorithms=["HS256"])
+            payload: dict = jwt.decode(str(request.data['token']), SECRET_KEY, algorithms=["HS256"])
         except:
             return Response({'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
         
@@ -138,15 +136,13 @@ class AuthViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
                 if  user.is_active:
                     user.set_password(request.data['password'])
                     user.save()
-                    serializer = self.get_serializer(user, data=request.data)
-                    serializer.is_valid(raise_exception=True)
-                    return Response({'message': 'Password reset successful', 'data': serializer.data}, status=status.HTTP_200_OK)
+                    return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
                 
                 else:
                     return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
                 
             else:
-                return Response(f"User not found", status=status.HTTP_404_NOT_FOUND)
+                return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
         except:
             return Response({'message': 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         

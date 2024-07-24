@@ -93,16 +93,8 @@ DATABASES = {
     }
 }
 
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'mail.theupfolio.com'
-EMAIL_USE_TLS = True
-EMAIL_PORT = 587
-EMAIL_HOST_USER = 'contact@theupfolio.com'
-EMAIL_HOST_PASSWORD = 'IDF@u9#)]Ge1'
-
 # General
-APPEND_SLASH = True
+APPEND_SLASH = False
 
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
@@ -138,7 +130,7 @@ REST_FRAMEWORK = {
     ],
     "EXCEPTION_HANDLER": ("core.exceptions.custom_exception_handler"),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
+        # 'rest_framework.authentication.BasicAuthentication',
         # 'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),

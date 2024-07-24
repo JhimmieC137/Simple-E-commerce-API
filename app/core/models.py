@@ -76,9 +76,6 @@ class Product(models.Model):
         
     def __str__(self):
         return self.name
-    
-    def save(self, *args, **kwargs):
-        self.price = float(self.price)
 
 class Order(models.Model):
     """Custom Order model with relations to User and Product"""
@@ -93,6 +90,11 @@ class Order(models.Model):
     status = models.CharField(max_length=50, choices=Status.choices, default=Status.INITIATED)
     date_created = models.CharField(max_length=50, default=datetime.now(), null=False)
     date_updated = models.CharField(max_length=50, default=datetime.now(), null=True)
+    
     class Meta: 
         ordering = ["-date_created"]
+    
+    def save(self, *args, **kwargs):
+        self.date_updated = datetime.now()
+        super().save(*args, **kwargs)
     

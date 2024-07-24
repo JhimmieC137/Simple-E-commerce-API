@@ -11,7 +11,6 @@ class CreateUserSerializer(serializers.ModelSerializer):
         return user.get_tokens()
     
     def create(self, validated_data):
-        # Keep all email addresses unique by converting them to lower case
         validated_data['email'] = validated_data['email'].lower() 
         user = User.objects.create_user(**validated_data)
         return user
@@ -68,8 +67,8 @@ class RequestPasswordResetSerializer(serializers.ModelSerializer):
         )
 
 class ResetPasswordSerializer(serializers.ModelSerializer):
-    tokens = serializers.SerializerMethodField()
-    
+    token = serializers.CharField(max_length=None, min_length=None, allow_blank=False)
+  
     def get_tokens(self, user):
         return user.get_tokens()    
     class Meta:
@@ -78,12 +77,14 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
             'id',
             'email',
             'name',
-            'tokens',
+            'password',
+            'token',
             'is_staff',
             'is_active',
         )
-        read_only_fields = ('id', 'email', 'tokens', 'name', 'is_staff', 'is_active')
 
+        read_only_fields = ('id', 'email', 'name', 'is_staff', 'is_active',)
+        extra_kwargs = {'password': {'write_only': True}, 'token': {'write_only': True}}
         
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
@@ -112,11 +113,12 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields = '__all__'
+
 class CreateOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model=Order
         fields = '__all__'
-        read_only_fields = ('date_created', 'status')
+        read_only_fields = ('date_created', 'status', 'date_updated')
     
     def create(self, validated_data):
         products = validated_data.pop('products')
@@ -131,20 +133,19 @@ class UpdateOrderSerializer(serializers.ModelSerializer):
         model=Order
         fields = '__all__'
     
-    def update(self, validated_data, *args, **kwargs):
-        validated_data.date_updated = datetime.now()
+    def update(self, validated_data, *args):
+        for product_id in args[0].get('products'):
+            validated_data.products.add(product_id)
         validated_data.save()
         return validated_data
         
 class UserSerializer(serializers.ModelSerializer):
-    orders = OrderSerializer(many=True, read_only=True)
     class Meta:
         model = User
         fields = (
             'id',
             'email',
             'name',
-            'orders',
             'is_staff',
             'is_active',
         )

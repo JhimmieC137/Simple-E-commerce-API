@@ -78,11 +78,7 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-        
-    def perform_update(self, serializer):
-        serializer.save()
-        
-    
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         try:
@@ -99,6 +95,31 @@ class UserViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, viewsets.G
             else:
                 return Response({'message': 'User has been dactivated'}, status=status.HTTP_403_FORBIDDEN)
                     
+        except:
+            return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+        
+    
+    def destroy(self, request, *args, **Kwargs):
+        """
+        Delete user
+        """
+        try:
+            instance = self.get_object()
+        except:
+            return Response({"message": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            instance = self.get_object()
+            instance.is_active = False
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response({"message":"User deleted successfully"}, status=status.HTTP_200_OK)
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         

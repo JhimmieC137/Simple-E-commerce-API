@@ -44,7 +44,7 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
 
     def list(self, request):
         """
-        Create product
+        List products
         """
         queryset = self.get_queryset()
         queryset = self.queryset.filter(
@@ -66,7 +66,7 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
         Create product
         """        
         try:
-            category = self.queryset.filter(name = request.data['category']).exists()
+            category = Category.objects.filter(id = request.data['category']).exists()
             if not category:
                 return Response({'message': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
             
@@ -95,10 +95,10 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
         try:
             serializer = self.get_serializer(instance)
             return Response({"message":"Product retrived successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-            
+        
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 
     def update(self, request, *args, **kwargs):
         """
@@ -111,9 +111,10 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
             return Response({"message": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
         try:
-            category = Category.objects.filter(id = request.data['category']).exists()
-            if not category:
-                return Response({'message': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
+            if 'category' in dict(request.data).keys():
+                category = Category.objects.filter(id = request.data['category']).exists()
+                if not category:
+                    return Response({'message': 'Category not found'}, status=status.HTTP_404_NOT_FOUND)
             
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
@@ -122,6 +123,11 @@ class ProductViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.
             
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
         
     
     def destroy(self, request, *args, **Kwargs):

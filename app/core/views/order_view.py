@@ -106,27 +106,34 @@ class OrderViewSet(mixins.RetrieveModelMixin, mixins.UpdateModelMixin, mixins.Cr
             return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
             
         try:
-            if request.data['products']:
+            if 'products' in dict(request.data).keys():
                 for product_id in request.data['products']:
                     if not Product.objects.filter(id = product_id).exists():
                         return Response({'message': f'Product {product_id} not found'}, status=status.HTTP_404_NOT_FOUND)
             
-            user =  User.objects.filter(id = request.data['user'])[0]
-            if user:
-                if user is None:
+            if 'user' in dict(request.data).keys():
+                user = User.objects.filter(id = request.data['user'])[0]
+                if user:
+                    if not user.is_active:
+                        return Response({'message': 'User has been deactivated'}, status=status.HTTP_403_FORBIDDEN)
+                else:
                     return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-                if not user.is_active:
-                    return Response({'message': 'User has been deactivated'}, status=status.HTTP_403_FORBIDDEN)
                 
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            
             serializer = OrderSerializer(Order.objects.get(id = serializer.data['id']))
             return Response({"message": "Order updated successfully", "data": serializer.data}, status=status.HTTP_200_OK)
-            
+        
         except:
             return Response({"message": "Something went wrong"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+    
     
     def destroy(self, request, *args, **Kwargs):
         """

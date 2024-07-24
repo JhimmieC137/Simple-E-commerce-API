@@ -21,7 +21,7 @@ from rest_framework.routers import DefaultRouter
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
-from core.urls import users_router
+from core.urls import auth_router, users_router, category_router, product_router, order_router
 
 router = DefaultRouter()
 
@@ -30,7 +30,12 @@ schema_view = get_schema_view(
     public=True,
 )
 
+router.registry.extend(auth_router.registry)
 router.registry.extend(users_router.registry)
+router.registry.extend(category_router.registry)
+router.registry.extend(product_router.registry)
+router.registry.extend(order_router.registry)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
