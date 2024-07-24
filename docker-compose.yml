@@ -15,7 +15,7 @@ services:
       - db
     networks:
       - backend
-      
+
   db:
     image: postgres:13.0-alpine
     volumes:
@@ -27,7 +27,7 @@ services:
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
     env_file:
-      - .env
+      - .env.dist
     networks:
       - backend
 
